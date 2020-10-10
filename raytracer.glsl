@@ -368,11 +368,11 @@ void main()
             specular = pow(lightlevel, 4.0);
             if (test_boxen(hit, plane_refl, nulldist1, box_outcolor, nulldist1))
             {
-                plane_outcolor = mix(plane_color*lightlevel, box_outcolor, 1.0);
+                plane_outcolor = mix(plane_color*lightlevel, box_outcolor, 0.75);
             }
             else
             {
-                plane_outcolor = mix(plane_color*lightlevel, texture2D(sky_tex, sphere2uv(plane_refl)).rgb, 1.0);
+                plane_outcolor = mix(plane_color*lightlevel, texture2D(sky_tex, sphere2uv(plane_refl)).rgb, 0.75);
             }
             fragColor = vec4((plane_outcolor)+(vec3(1.0)*specular), 1.0);
         }
