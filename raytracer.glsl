@@ -24,6 +24,9 @@ vec3 Z_AXIS = vec3(0.0, 0.0, 1.0);
 int NUM_SPHERES = 300;
 vec3 SPHERE_POSITIONS[150];
 float SPHERE_RADIUSES[150];
+float SPOT_MAXANGLE = 45.0;
+float SPOT_MAXDISTANCE = 1000.0;
+float SPOT_SMOOTHING = 0.5;
 struct isect_result {
     vec3 hit;
     vec3 normal;
@@ -37,6 +40,10 @@ vec3 BOX_FACE_COLORS[6] = {
     vec3(0.0, 1.0, 1.0),
     vec3(1.0, 1.0, 1.0)
     };
+float alter01s(float v, float zero, float one)
+{
+    return (v-zero)/(one-zero);
+}
 int rayPlaneIntersect(vec3 rayP, vec3 rayD, vec3 planeP, vec3 planeN, out vec3 hit, out vec3 normal)
 {
     float d = dot(planeP, -planeN);
@@ -230,9 +237,10 @@ float spot_light_calc(vec3 point, vec3 normal, vec3 lightpos, vec3 spotdir, floa
     float lightdist = distance(point, lightpos);
     float angledot = dot(lightvec, spotdir);
     float angle = degrees(acos(angledot));
+    float angle_ratio = abs(angle/max_angle);
     if (angle < max_angle)
     {
-        return max(dot(lightvec, -normal), 0.0)*pow((max(angledot, 0.0)), smoothing)*(max(1.0-min(lightdist/maxdistance, 1.0), 0.0));
+        return max(dot(lightvec, -normal), 0.0)*pow(1.0-angle_ratio, smoothing)*(max(1.0-min(lightdist/maxdistance, 1.0), 0.0));
     }
     else
     {
@@ -248,7 +256,7 @@ bool test_box(vec3 ro, vec3 rv, vec3 box_min, vec3 box_max, float cdistance, out
     vec3 hitvec;
     vec3 lightvec;
     float lightfac, specular;
-    vec3 lightpos = cam_pos;
+    vec3 lightpos = cam_pos+(cam_orn*vec3(0.5, 0.0, 0.0));
     //isect_result res;
     if (rayBoxIntersect(ro, rv, box_min, box_max, hit, normal, face) == 1)
     {
@@ -260,10 +268,10 @@ bool test_box(vec3 ro, vec3 rv, vec3 box_min, vec3 box_max, float cdistance, out
             //lightvec = normalize(hit-lightpos);
             //lightdist = distance(hit, lightpos);
             //lightfac = (max(dot(lightvec, -normal), 0.0)*pow(max(dot(lightvec, cam_orn*-Z_AXIS), 0.0), 4.0)*(1.0-min(lightdist/100.0, 1.0)));
-            lightfac = spot_light_calc(hit, normal, lightpos, cam_orn*-Z_AXIS, 90.0, 100.0, 8.0);
-            specular = pow(lightfac, 16.0);
-            //color = (texture2D(sphere_tex, sphere2uv(hitvec)).rgb*lightfac)+(vec3(1.0)*specular);
-            color = (texture2D(sphere_tex, sphere2uv(hitvec)).rgb);
+            lightfac = spot_light_calc(hit, normal, lightpos, cam_orn*-Z_AXIS, SPOT_MAXANGLE, SPOT_MAXDISTANCE, SPOT_SMOOTHING);
+            specular = pow(lightfac, 8.0);
+            color = (texture2D(sphere_tex, sphere2uv(hitvec)).rgb*(0.25+(lightfac*0.75)))+(vec3(1.0)*specular);
+            //color = (texture2D(sphere_tex, sphere2uv(hitvec)).rgb);
             return true;
         }
     }
@@ -322,7 +330,7 @@ void main()
     float dist;
     vec4 bgColor = texture2D(sky_tex, sphere2uv(cam_orn*rv));
     vec4 fragColor = bgColor;
-    vec3 lightpos = cam_pos;
+    vec3 lightpos = cam_pos+(cam_orn*vec3(0.5, 0.0, 0.0));
     float lightdist;
     float lightmaxdist = 200.0;
     vec3 lightvec;
@@ -364,7 +372,7 @@ void main()
             //lightlevel = dot(-plane_outnormal, lightvec)*(1.0-clamp(distance(lightpos, hit)/lightmaxdist, 0.0, 1.0));
             //specular = pow(lightlevel, 16);
             //lightlevel = (max(dot(lightvec, -plane_refl), 0.0)*max(dot(lightvec, cam_orn*-Z_AXIS), 0.0)*(1.0-min(lightdist/1000.0, 1.0)));
-            lightlevel = spot_light_calc(hit, plane_refl, lightpos, cam_orn*-Z_AXIS, 45.0, 1000.0, 2.0);
+            lightlevel = spot_light_calc(hit, plane_refl, lightpos, cam_orn*-Z_AXIS, SPOT_MAXANGLE, SPOT_MAXDISTANCE, SPOT_SMOOTHING);
             specular = pow(lightlevel, 4.0);
             if (test_boxen(hit, plane_refl, nulldist1, box_outcolor, nulldist1))
             {

@@ -67,7 +67,7 @@ def init(cont):
     cube = scene.objects['Cube']
     #cube_textures = dict((t.name, t) for t in cube.meshes[0].materials[0].textures if t is not None)
     #ct0 = cube_textures['Texture']
-    cube_textures = dict((tname, _FakeTexture.load(tname, tpath)) for tname, tpath in [("Texture", "//textures/moon_map.jpg"), ("grid", "//textures/color_grid.png"), ("sky", "//textures/sky1.png")])
+    cube_textures = dict((tname, _FakeTexture.load(tname, tpath)) for tname, tpath in [("Texture", "//textures/moon_map.jpg"), ("grid", "//textures/color_grid.png"), ("sky", "//textures/milky-way-panorama.jpg")])
     owner['textures'] = cube_textures
     st = owner['textures']['Texture']
     #setTextureNearest(st)
