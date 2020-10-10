@@ -2,6 +2,37 @@ import bge, mathutils, math, bgl
 from bgl import *
 rot90 = mathutils.Matrix.Rotation(math.radians(-90), 4, mathutils.Vector((1, 0, 0))).to_3x3()
 MOVEMENT_SPEED = 0.2
+def load_texture(path, min_filter=GL_LINEAR, mag_filter=GL_LINEAR):
+    idbuf = Buffer(GL_INT, 1)
+    glGenTextures(1, idbuf)
+    texid = idbuf[0]
+    glBindTexture(GL_TEXTURE_2D, texid)
+    try:
+        glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+        img = bge.texture.ImageFFmpeg(bge.logic.expandPath(path))
+        img.scale = False
+        img.filter = bge.texture.FilterRGBA32()
+        data = img.image
+        print(data.dimensions)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.size[0], img.size[1], 0, GL_RGBA, GL_UNSIGNED_BYTE, data)
+        print(glGetError())
+        print("Loaded image %r" % (path,))
+    finally:
+        glBindTexture(GL_TEXTURE_2D, 0)
+    return texid
+class _FakeTexture(object):
+    name = ""
+    bindCode = None
+    def __init__(self, name, texid):
+        self.name = str(name)
+        self.bindCode = texid
+    @classmethod
+    def load(cls, name, path, **k):
+        return cls(name, load_texture(path, **k))
 def update_movement(cont):
     owner = cont.owner
     values = dict((k, float(cont.sensors[k.upper()].positive)) for k in "wasdqz")
@@ -27,21 +58,20 @@ def update_shader(cont):
 def setTextureNearest(texture):
     stid = texture.bindCode
     glBindTexture(GL_TEXTURE_2D, stid)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
     glBindTexture(GL_TEXTURE_2D, 0)
 def init(cont):
     owner = cont.owner
     scene = owner.scene
     cube = scene.objects['Cube']
-    cube_textures = dict((t.name, t) for t in cube.meshes[0].materials[0].textures if t is not None)
+    #cube_textures = dict((t.name, t) for t in cube.meshes[0].materials[0].textures if t is not None)
     #ct0 = cube_textures['Texture']
+    cube_textures = dict((tname, _FakeTexture.load(tname, tpath)) for tname, tpath in [("Texture", "//textures/moon_map.jpg"), ("grid", "//textures/color_grid.png"), ("sky", "//textures/sky1.png")])
     owner['textures'] = cube_textures
     st = owner['textures']['Texture']
-    setTextureNearest(st)
-    setTextureNearest(owner['textures']['sky'])
+    #setTextureNearest(st)
+    #setTextureNearest(owner['textures']['sky'])
     with open(bge.logic.expandPath("//raytracer.glsl"), "r") as shaderfile:
         _RT_src = shaderfile.read()
     print(_RT_src)
